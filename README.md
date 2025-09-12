@@ -1,107 +1,77 @@
-PGP Secure Chat
-PGP Secure Chat is a web-based, real-time messaging application that provides strong, end-to-end encryption for all communications. It leverages the power of OpenPGP.js to implement a zero-knowledge cryptographic model, ensuring that only the communicating users can read their messages.
+# PGP Secure Chat
 
-This project is built with a modern tech stack including React.js for the frontend, Google Firestore for the real-time backend, and Tailwind CSS for styling.
+PGP Secure Chat is a web-based, real-time messaging application engineered with a primary focus on user privacy and data security. It provides strong, end-to-end encryption for all communications using a zero-knowledge model. This architecture ensures that the server infrastructure has no ability to read user messages or access the private keys required for decryption, placing control squarely in the hands of the user.
 
-Core Features
-True End-to-End Encryption: All messages are encrypted and decrypted entirely client-side (in the browser). The server only ever stores unintelligible ciphertext.
+Built with React and Firebase, this application demonstrates a modern approach to building secure, serverless, real-time applications.
 
-Zero-Knowledge Architecture: The server has no access to user passwords or private keys, making it impossible for the service provider to decipher user communications.
+## Core Features
 
-Secure, Client-Side Key Management: Strong RSA-4096 key pairs are generated and managed directly by the user's browser.
+* **True End-to-End Encryption:** All messages are encrypted in the browser before transmission and decrypted upon receipt. The server only ever handles and stores unintelligible ciphertext.
 
-Message Authenticity & Integrity: Messages are digitally signed to prove they came from the correct sender and were not tampered with in transit.
+* **Client-Side Key Generation:** Secure RSA-4096 key pairs are generated and managed entirely by the client's browser. The user's private key is immediately encrypted with their password and is never sent to the server in any form.
 
-Real-time Messaging: Messages appear instantly without needing to refresh the page.
+* **Message Authenticity & Integrity:** Messages are digitally signed using the sender's private key. This allows the recipient to verify that a message was sent by the authentic user and has not been tampered with in transit.
 
-Session Persistence: Your secure session is remembered if you refresh the page, providing a seamless user experience.
+* **Real-time & Persistent:** The application uses WebSockets via Firestore for live messaging. It also remembers your login session if you refresh the page, providing a seamless and uninterrupted user experience.
 
-Deep Dive: The Cryptography Model
-The security of this application is built on established cryptographic principles, implemented through OpenPGP.js. Here is a detailed breakdown of the processes.
+## How the Security Works
 
-1. Key Generation (Client-Side)
-When a user registers, a new RSA-4096 key pair is generated directly within their browser. This process is entirely client-side.
+The application's security is founded on the principles of the OpenPGP standard, ensuring a robust and verifiable cryptographic process.
 
-Public Key: This key is designed to be shared. It is sent to the Firestore server and associated with the username. Other users will fetch this key to encrypt messages intended for this user.
+1.  **Registration & Key Generation:** When a user registers, a new **RSA-4096** public/private key pair is generated locally in their browser.
+    * The **Public Key** is sent to the Firestore server to be associated with the username. This allows other users to find it and use it to encrypt messages.
+    * The **Private Key**, the user's most important secret, is immediately encrypted with a strong symmetric cipher (AES-256) using the user's password as the key. The user is then prompted to download this encrypted private key file. The server never has access to the password or the unencrypted private key.
 
-Private Key: This key is the user's most critical secret. It never leaves the user's browser in an unencrypted state.
+2.  **Login & Key Decryption:** To log in, a user must provide three pieces of information: their username, their password, AND their unique private key file. The application uses the password to decrypt the private key locally, loading it into memory for the duration of the session.
 
-2. Private Key Protection
-Immediately upon generation, the private key is encrypted using the user's chosen password. OpenPGP.js uses a strong symmetric encryption algorithm (like AES-256) for this. The password becomes the "key to the key."
+3.  **Messaging - Encryption & Signing:** When a message is sent, a two-step process occurs:
+    * **Signing (Authenticity):** The message is first digitally signed with the sender's unlocked private key.
+    * **Encryption (Confidentiality):** The signed message is then encrypted using the public keys of **both the sender and the recipient**. Encrypting for both users is a critical step that ensures the sender can also decrypt and view their own message history. The final ciphertext is then sent to the server.
 
-The user is then prompted to download this encrypted private key as an .asc file.
+## Tech Stack
 
-This is the core of the zero-knowledge model. Without the user's password, the downloaded private key file is useless. Since the password is never sent to the server, the server has no way to access the user's private key.
+* **Frontend: React.js**
+    * Chosen for its component-based architecture, which allows for a clean, scalable, and maintainable user interface.
+* **Backend: Google Firebase (Firestore)**
+    * Provides a real-time, NoSQL database that simplifies the complexities of live chat. It acts as a "serverless" backend, handling data storage and real-time listeners.
+* **Cryptography: OpenPGP.js**
+    * A well-audited JavaScript implementation of the OpenPGP standard, providing all necessary functions for key generation, encryption, decryption, and digital signatures.
+* **Styling: Tailwind CSS**
+    * A utility-first CSS framework that enables rapid development of a modern and responsive user interface.
 
-3. Message Encryption & Signing (The Sending Process)
-When a user sends a message, a multi-step cryptographic process occurs in the browser:
+## Quick Start & Local Setup
 
-Fetch Public Keys: The application retrieves the public keys of both the recipient and the sender from Firestore.
+### 1. Prerequisites
 
-Digital Signature (Authenticity): The plaintext message is digitally signed using the sender's own private key (which was unlocked with their password upon login). This signature acts as a verifiable seal, proving that the message originated from the sender and that its contents have not been altered.
+* **Node.js and npm:** You must have these installed on your machine to manage packages and run the development server. You can get them from the [Node.js official website](https://nodejs.org/).
+* **A Google Firebase project:** This is required for the backend database. You can create one for free.
 
-Encryption (Confidentiality): The signed message is then encrypted using the public keys of both the sender and the recipient. Encrypting for both users is crucial, as it ensures that the sender can also decrypt and view their own sent messages in their chat history.
+### 2. Installation
 
-Transmit Ciphertext: Only the final, encrypted and signed block of ciphertext is sent to the Firestore server for storage.
+1.  **Clone the repository:** Open your terminal and run the following command to download the project files.
+    ```bash
+    git clone [https://github.com/Cyber-Security-July-Dec-2025/C16.git](https://github.com/Cyber-Security-July-Dec-2025/C16.git)
+    cd C16
+    ```
 
-4. Message Decryption & Verification (The Receiving Process)
-When a client receives an encrypted message from the server:
+2.  **Install dependencies:** This command reads the `package.json` file and installs all the necessary libraries (React, Firebase, etc.).
+    ```bash
+    npm install
+    ```
 
-Decryption: The application uses the logged-in user's private key to decrypt the message. If the user is not the intended sender or recipient, this step will fail mathematically, and the message will remain unreadable.
+### 3. Configuration
 
-Signature Verification: After decryption, the application uses the sender's public key to verify the digital signature attached to the message. This confirms two things:
+1.  **Set Up Firebase:**
+    * In your Firebase project console, navigate to **Build > Firestore Database** and create a new database. It is crucial to start it in **test mode** for development.
+    * Next, navigate to **Build > Authentication**, click "Get started", and simply enable the service. This is required for the app's backend connection.
 
-Authenticity: The message was indeed signed by the private key corresponding to the sender's public key.
+2.  **Add Credentials:**
+    * In your Firebase project's settings, find your **Web App** configuration.
+    * Copy the entire `firebaseConfig` JavaScript object.
+    * Paste this object into the `src/firebase/config.js` file in your project, replacing the placeholder values.
 
-Integrity: The message was not modified in any way after it was signed.
+### 4. Run the App
 
-If both steps succeed, the plaintext is displayed to the user. This robust process guarantees both the confidentiality and authenticity of every message in the system.
-
-Tech Stack
-Frontend: React.js
-
-Backend: Google Firebase (Firestore) for real-time database.
-
-Styling: Tailwind CSS
-
-Cryptography: OpenPGP.js (RSA-4096 for asymmetric encryption, AES-256 for symmetric key protection).
-
-Setup and Installation
-Follow these steps to get a local copy of the project up and running.
-
-Prerequisites
-Node.js and npm installed on your machine.
-
-A Google Firebase account.
-
-Step-by-Step Guide
-Clone the Repository:
-
-git clone <repository-url>
-cd pgp-secure-chat
-
-Install Dependencies:
-
-npm install
-
-Set Up Firebase:
-
-Go to the Firebase Console and create a new project.
-
-Add a new Web App (</>) to your project.
-
-Copy the firebaseConfig object provided.
-
-In the Firebase console, go to Build > Firestore Database and click "Create database". Start it in test mode.
-
-Go to Build > Authentication, click "Get started", and enable the service.
-
-Configure the Application:
-
-In the project, navigate to src/firebase/config.js.
-
-Replace the placeholder firebaseConfig object with the one you copied from your Firebase project.
-
-Run the Development Server:
-
+Once configuration is complete, start the local development server.
+```bash
 npm start
